@@ -1,0 +1,15 @@
+# Local development overrides when running from user-service/.
+# Copy to docker-compose.override.yml — Docker Compose merges it automatically.
+#
+#   cp docker-compose.override.example.yml docker-compose.override.yml
+#
+# Beekeeper / DBeaver connection:
+#   Host: localhost | Port: 5433 | User: postgres | Password: postgres | DB: user_db
+#
+# Host port 5433 avoids conflict with a local PostgreSQL install on 5432.
+# Change the left side (e.g. "5432:5432") if 5433 is also taken.
+
+services:
+  postgres:
+    ports:
+      - "5433:5432"
