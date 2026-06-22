@@ -15,6 +15,8 @@ type ProductService interface {
 	CreateProduct(ctx context.Context, req dto.CreateProductRequest) (*dto.ProductResponse, error)
 	ListProducts(ctx context.Context) ([]dto.ProductResponse, error)
 	GetProductByID(ctx context.Context, id uuid.UUID) (*dto.ProductResponse, error)
+	UpdateProduct(ctx context.Context, id uuid.UUID, req dto.UpdateProductRequest) (*dto.ProductResponse, error)
+	DeleteProduct(ctx context.Context, id uuid.UUID) error
 }
 
 type ProductHandler struct {
@@ -75,4 +77,52 @@ func (h *ProductHandler) GetProductByID(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, product)
+}
+
+func (h *ProductHandler) UpdateProduct(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid product id"})
+		return
+	}
+
+	var req dto.UpdateProductRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	resp, err := h.productService.UpdateProduct(c.Request.Context(), id, req)
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrProductNotFound):
+			c.JSON(http.StatusNotFound, gin.H{"error": service.ErrProductNotFound.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, resp)
+}
+
+func (h *ProductHandler) DeleteProduct(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid product id"})
+		return
+	}
+
+	err = h.productService.DeleteProduct(c.Request.Context(), id)
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrProductNotFound):
+			c.JSON(http.StatusNotFound, gin.H{"error": service.ErrProductNotFound.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		}
+		return
+	}
+
+	c.AbortWithStatus(http.StatusNoContent)
 }

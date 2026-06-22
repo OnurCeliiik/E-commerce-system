@@ -7,8 +7,8 @@ import (
 )
 
 type Dependencies struct {
-	DB              *gorm.DB
-	ProductHandler  *handlers.ProductHandler
+	DB             *gorm.DB
+	ProductHandler *handlers.ProductHandler
 }
 
 func RegisterRoutes(router *gin.Engine, deps Dependencies) {
@@ -19,5 +19,7 @@ func RegisterRoutes(router *gin.Engine, deps Dependencies) {
 		v1.POST("/products", deps.ProductHandler.CreateProduct)
 		v1.GET("/products", deps.ProductHandler.ListProducts)
 		v1.GET("/products/:id", deps.ProductHandler.GetProductByID)
+		v1.PUT("/products/:id", deps.ProductHandler.UpdateProduct)
+		v1.DELETE("/products/:id", deps.ProductHandler.DeleteProduct)
 	}
 }

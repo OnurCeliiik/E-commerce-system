@@ -42,3 +42,18 @@ func (r *productRepository) FindByID(ctx context.Context, id uuid.UUID) (*model.
 	}
 	return &product, nil
 }
+
+func (r *productRepository) Update(ctx context.Context, product *model.Product) error {
+	return r.db.WithContext(ctx).Save(product).Error
+}
+
+func (r *productRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	result := r.db.WithContext(ctx).Delete(&model.Product{}, "id = ?", id)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return ErrProductNotFound
+	}
+	return nil
+}

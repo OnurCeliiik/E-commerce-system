@@ -32,6 +32,8 @@ func RegisterRoutes(router *gin.Engine, deps Dependencies) {
 		admin := v1.Group("")
 		admin.Use(deps.AuthMiddleware, deps.RequireAdmin)
 		admin.POST("/products", deps.ProductServiceProxy.ServeHTTP)
+		admin.PUT("/products/:id", deps.ProductServiceProxy.ServeHTTP)
+		admin.DELETE("/products/:id", deps.ProductServiceProxy.ServeHTTP)
 	}
 }
 
