@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/OnurCeliiik/ecommerce/services/user/auth"
+	"github.com/OnurCeliiik/ecommerce/services/user/model"
 	"github.com/google/uuid"
 )
 
@@ -15,7 +16,7 @@ func TestHMACProvider_GenerateAndValidate(t *testing.T) {
 	}
 
 	userID := uuid.New()
-	token, err := provider.Generate(userID)
+	token, err := provider.Generate(userID, model.RoleCustomer)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -26,6 +27,14 @@ func TestHMACProvider_GenerateAndValidate(t *testing.T) {
 	}
 	if gotID != userID {
 		t.Fatalf("expected %s, got %s", userID, gotID)
+	}
+
+	role, err := provider.RoleFromToken(token)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if role != string(model.RoleCustomer) {
+		t.Fatalf("expected customer role, got %s", role)
 	}
 }
 

@@ -33,11 +33,11 @@ func (m *mockUserRepository) FindByID(ctx context.Context, userID uuid.UUID) (*m
 }
 
 type mockTokenGenerator struct {
-	generate func(userID uuid.UUID) (string, error)
+	generate func(userID uuid.UUID, role model.Role) (string, error)
 }
 
-func (m *mockTokenGenerator) Generate(userID uuid.UUID) (string, error) {
-	return m.generate(userID)
+func (m *mockTokenGenerator) Generate(userID uuid.UUID, role model.Role) (string, error) {
+	return m.generate(userID, role)
 }
 
 func TestRegister_Success(t *testing.T) {
@@ -47,11 +47,19 @@ func TestRegister_Success(t *testing.T) {
 		},
 		create: func(ctx context.Context, user *model.User) error {
 			user.CreatedAt = time.Now()
+			if user.Role != model.RoleCustomer {
+				t.Fatalf("expected customer role, got %s", user.Role)
+			}
 			return nil
 		},
 	}
+	tokens := &mockTokenGenerator{
+		generate: func(userID uuid.UUID, role model.Role) (string, error) {
+			return "jwt-token", nil
+		},
+	}
 
-	svc := service.NewUserService(repo, &mockTokenGenerator{})
+	svc := service.NewUserService(repo, tokens)
 	resp, err := svc.Register(context.Background(), dto.RegisterUserRequest{
 		FirstName: "Ada",
 		LastName:  "Lovelace",
@@ -63,6 +71,12 @@ func TestRegister_Success(t *testing.T) {
 	}
 	if resp.Email != "ada@example.com" {
 		t.Fatalf("expected email ada@example.com, got %s", resp.Email)
+	}
+	if resp.Token != "jwt-token" {
+		t.Fatalf("expected token, got %s", resp.Token)
+	}
+	if resp.Role != string(model.RoleCustomer) {
+		t.Fatalf("expected customer role, got %s", resp.Role)
 	}
 }
 
@@ -98,13 +112,17 @@ func TestLogin_Success(t *testing.T) {
 				ID:           userID,
 				Email:        email,
 				PasswordHash: hash,
+				Role:         model.RoleAdmin,
 			}, nil
 		},
 	}
 	tokens := &mockTokenGenerator{
-		generate: func(id uuid.UUID) (string, error) {
+		generate: func(id uuid.UUID, role model.Role) (string, error) {
 			if id != userID {
 				t.Fatalf("expected user id %s, got %s", userID, id)
+			}
+			if role != model.RoleAdmin {
+				t.Fatalf("expected admin role, got %s", role)
 			}
 			return "jwt-token", nil
 		},
@@ -120,6 +138,9 @@ func TestLogin_Success(t *testing.T) {
 	}
 	if resp.Token != "jwt-token" {
 		t.Fatalf("expected jwt-token, got %s", resp.Token)
+	}
+	if resp.Role != string(model.RoleAdmin) {
+		t.Fatalf("expected admin role, got %s", resp.Role)
 	}
 }
 

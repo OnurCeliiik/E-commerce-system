@@ -14,6 +14,8 @@ type RegisterUserResponse struct {
 	FirstName string    `json:"first_name"`
 	LastName  string    `json:"last_name"`
 	Email     string    `json:"email"`
+	Role      string    `json:"role"`
+	Token     string    `json:"token"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
@@ -24,6 +26,7 @@ type LoginUserRequest struct {
 
 type LoginUserResponse struct {
 	Token string `json:"token"`
+	Role  string `json:"role"`
 }
 
 type MeResponse struct {
@@ -31,4 +34,5 @@ type MeResponse struct {
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
 	Email     string `json:"email"`
+	Role      string `json:"role"`
 }

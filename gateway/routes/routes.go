@@ -8,8 +8,10 @@ import (
 )
 
 type Dependencies struct {
-	UserServiceProxy *proxy.UserService
-	AuthMiddleware   gin.HandlerFunc
+	UserServiceProxy    *proxy.UserService
+	ProductServiceProxy *proxy.ProductService
+	AuthMiddleware      gin.HandlerFunc
+	RequireAdmin        gin.HandlerFunc
 }
 
 func RegisterRoutes(router *gin.Engine, deps Dependencies) {
@@ -17,14 +19,19 @@ func RegisterRoutes(router *gin.Engine, deps Dependencies) {
 
 	v1 := router.Group("/api/v1")
 	{
-		// Public — no JWT required
 		v1.POST("/register", deps.UserServiceProxy.ServeHTTP)
 		v1.POST("/login", deps.UserServiceProxy.ServeHTTP)
 
-		// Protected — JWT required at gateway
+		v1.GET("/products", deps.ProductServiceProxy.ServeHTTP)
+		v1.GET("/products/:id", deps.ProductServiceProxy.ServeHTTP)
+
 		protected := v1.Group("")
 		protected.Use(deps.AuthMiddleware)
 		protected.GET("/me", deps.UserServiceProxy.ServeHTTP)
+
+		admin := v1.Group("")
+		admin.Use(deps.AuthMiddleware, deps.RequireAdmin)
+		admin.POST("/products", deps.ProductServiceProxy.ServeHTTP)
 	}
 }
 

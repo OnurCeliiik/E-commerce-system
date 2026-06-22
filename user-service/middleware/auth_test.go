@@ -13,11 +13,22 @@ import (
 
 type mockTokenValidator struct {
 	userID uuid.UUID
+	role   string
 	err    error
 }
 
 func (m *mockTokenValidator) UserIDFromToken(token string) (uuid.UUID, error) {
-	return m.userID, m.err
+	if m.err != nil {
+		return uuid.Nil, m.err
+	}
+	return m.userID, nil
+}
+
+func (m *mockTokenValidator) RoleFromToken(token string) (string, error) {
+	if m.err != nil {
+		return "", m.err
+	}
+	return m.role, nil
 }
 
 func init() {
@@ -36,7 +47,7 @@ func TestAuth(t *testing.T) {
 		{
 			name:       "valid token",
 			header:     "Bearer valid-token",
-			validator:  &mockTokenValidator{userID: validUserID},
+			validator:  &mockTokenValidator{userID: validUserID, role: "customer"},
 			wantStatus: http.StatusOK,
 		},
 		{
@@ -54,13 +65,13 @@ func TestAuth(t *testing.T) {
 		{
 			name:       "invalid prefix",
 			header:     "Bearer: valid-token",
-			validator:  &mockTokenValidator{userID: validUserID},
+			validator:  &mockTokenValidator{userID: validUserID, role: "customer"},
 			wantStatus: http.StatusUnauthorized,
 		},
 		{
 			name:       "bearer with extra spaces",
 			header:     "Bearer    valid-token",
-			validator:  &mockTokenValidator{userID: validUserID},
+			validator:  &mockTokenValidator{userID: validUserID, role: "customer"},
 			wantStatus: http.StatusOK,
 		},
 	}
@@ -89,7 +100,7 @@ func TestAuth(t *testing.T) {
 
 func TestAuth_SetsUserIDOnContext(t *testing.T) {
 	userID := uuid.New()
-	validator := &mockTokenValidator{userID: userID}
+	validator := &mockTokenValidator{userID: userID, role: "customer"}
 
 	router := gin.New()
 	router.GET("/", middleware.Auth(validator), func(c *gin.Context) {
@@ -111,5 +122,21 @@ func TestAuth_SetsUserIDOnContext(t *testing.T) {
 
 	if rr.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", rr.Code)
+	}
+}
+
+func TestRequireRole_AdminOnly(t *testing.T) {
+	router := gin.New()
+	router.GET("/", func(c *gin.Context) {
+		c.Set("role", "customer")
+		c.Next()
+	}, middleware.RequireRole("admin"), func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	rr := httptest.NewRecorder()
+	router.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/", nil))
+	if rr.Code != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d", rr.Code)
 	}
 }

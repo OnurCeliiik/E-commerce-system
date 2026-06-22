@@ -17,6 +17,11 @@ func main() {
 		log.Fatal("USER_SERVICE_URL is not set")
 	}
 
+	productServiceURL := os.Getenv("PRODUCT_SERVICE_URL")
+	if productServiceURL == "" {
+		log.Fatal("PRODUCT_SERVICE_URL is not set")
+	}
+
 	tokenProvider, err := auth.NewHMACProvider(os.Getenv("JWT_SECRET"))
 	if err != nil {
 		log.Fatalf("failed to create token provider: %v", err)
@@ -27,10 +32,17 @@ func main() {
 		log.Fatalf("failed to create user service proxy: %v", err)
 	}
 
+	productProxy, err := proxy.NewProductService(productServiceURL)
+	if err != nil {
+		log.Fatalf("failed to create product service proxy: %v", err)
+	}
+
 	router := gin.Default()
 	routes.RegisterRoutes(router, routes.Dependencies{
-		UserServiceProxy: userProxy,
-		AuthMiddleware:   middleware.Auth(tokenProvider),
+		UserServiceProxy:    userProxy,
+		ProductServiceProxy: productProxy,
+		AuthMiddleware:      middleware.Auth(tokenProvider),
+		RequireAdmin:        middleware.RequireRole(middleware.RoleAdmin),
 	})
 
 	port := os.Getenv("PORT")

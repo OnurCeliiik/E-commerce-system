@@ -34,9 +34,10 @@ func TestHMACProvider_ValidUserServiceToken(t *testing.T) {
 	userID := uuid.New()
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"sub": userID.String(),
-		"exp": time.Now().Add(time.Hour).Unix(),
-		"iat": time.Now().Unix(),
+		"sub":  userID.String(),
+		"role": "admin",
+		"exp":  time.Now().Add(time.Hour).Unix(),
+		"iat":  time.Now().Unix(),
 	})
 	tokenString, err := token.SignedString([]byte(secret))
 	if err != nil {
@@ -54,5 +55,13 @@ func TestHMACProvider_ValidUserServiceToken(t *testing.T) {
 	}
 	if gotID != userID {
 		t.Fatalf("expected %s, got %s", userID, gotID)
+	}
+
+	role, err := provider.RoleFromToken(tokenString)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if role != "admin" {
+		t.Fatalf("expected admin, got %s", role)
 	}
 }

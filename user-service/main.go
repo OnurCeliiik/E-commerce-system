@@ -24,6 +24,10 @@ func main() {
 		log.Fatalf("failed to migrate database: %v", err)
 	}
 
+	if err := database.SeedAdmin(db); err != nil {
+		log.Fatalf("failed to seed admin user: %v", err)
+	}
+
 	tokenProvider, err := auth.NewHMACProvider(os.Getenv("JWT_SECRET"), 24*time.Hour)
 	if err != nil {
 		log.Fatalf("failed to create token provider: %v", err)

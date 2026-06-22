@@ -8,9 +8,12 @@ services:
     environment:
       PORT: "8080"
       USER_SERVICE_URL: http://user-service:8080
+      PRODUCT_SERVICE_URL: http://product-service:8080
       JWT_SECRET: dev-secret-for-development
     depends_on:
       user-service:
+        condition: service_started
+      product-service:
         condition: service_started
 
   user-service:
@@ -20,6 +23,8 @@ services:
     environment:
       DATABASE_URL: postgres://postgres:postgres@postgres:5432/user_db?sslmode=disable
       JWT_SECRET: dev-secret-for-development
+      ADMIN_EMAIL: admin@example.com
+      ADMIN_PASSWORD: admin-secret
     depends_on:
       postgres:
         condition: service_healthy

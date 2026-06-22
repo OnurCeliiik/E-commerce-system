@@ -18,7 +18,7 @@ type UserRepository interface {
 }
 
 type TokenGenerator interface {
-	Generate(userID uuid.UUID) (string, error)
+	Generate(userID uuid.UUID, role model.Role) (string, error)
 }
 
 type userService struct {
@@ -50,9 +50,15 @@ func (s *userService) Register(ctx context.Context, req dto.RegisterUserRequest)
 		LastName:     req.LastName,
 		Email:        req.Email,
 		PasswordHash: hash,
+		Role:         model.RoleCustomer,
 	}
 
 	if err := s.repo.Create(ctx, user); err != nil {
+		return nil, err
+	}
+
+	token, err := s.tokens.Generate(user.ID, user.Role)
+	if err != nil {
 		return nil, err
 	}
 
@@ -61,6 +67,8 @@ func (s *userService) Register(ctx context.Context, req dto.RegisterUserRequest)
 		FirstName: user.FirstName,
 		LastName:  user.LastName,
 		Email:     user.Email,
+		Role:      string(user.Role),
+		Token:     token,
 		CreatedAt: user.CreatedAt,
 	}, nil
 }
@@ -78,13 +86,14 @@ func (s *userService) Login(ctx context.Context, req dto.LoginUserRequest) (*dto
 		return nil, ErrInvalidCredentials
 	}
 
-	token, err := s.tokens.Generate(user.ID)
+	token, err := s.tokens.Generate(user.ID, user.Role)
 	if err != nil {
 		return nil, err
 	}
 
 	return &dto.LoginUserResponse{
 		Token: token,
+		Role:  string(user.Role),
 	}, nil
 }
 
@@ -102,5 +111,6 @@ func (s *userService) Me(ctx context.Context, userID uuid.UUID) (*dto.MeResponse
 		FirstName: user.FirstName,
 		LastName:  user.LastName,
 		Email:     user.Email,
+		Role:      string(user.Role),
 	}, nil
 }

@@ -23,19 +23,9 @@ func NewHMACProvider(secret string) (*HMACProvider, error) {
 }
 
 func (p *HMACProvider) UserIDFromToken(tokenString string) (uuid.UUID, error) {
-	parsedToken, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-		}
-		return p.secret, nil
-	})
+	claims, err := p.parseClaims(tokenString)
 	if err != nil {
-		return uuid.Nil, ErrInvalidToken
-	}
-
-	claims, ok := parsedToken.Claims.(jwt.MapClaims)
-	if !ok || !parsedToken.Valid {
-		return uuid.Nil, ErrInvalidToken
+		return uuid.Nil, err
 	}
 
 	sub, ok := claims["sub"].(string)
@@ -49,4 +39,37 @@ func (p *HMACProvider) UserIDFromToken(tokenString string) (uuid.UUID, error) {
 	}
 
 	return userID, nil
+}
+
+func (p *HMACProvider) RoleFromToken(tokenString string) (string, error) {
+	claims, err := p.parseClaims(tokenString)
+	if err != nil {
+		return "", err
+	}
+
+	role, ok := claims["role"].(string)
+	if !ok || role == "" {
+		return "", ErrInvalidToken
+	}
+
+	return role, nil
+}
+
+func (p *HMACProvider) parseClaims(tokenString string) (jwt.MapClaims, error) {
+	parsedToken, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return p.secret, nil
+	})
+	if err != nil {
+		return nil, ErrInvalidToken
+	}
+
+	claims, ok := parsedToken.Claims.(jwt.MapClaims)
+	if !ok || !parsedToken.Valid {
+		return nil, ErrInvalidToken
+	}
+
+	return claims, nil
 }
