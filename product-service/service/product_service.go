@@ -84,9 +84,6 @@ func (s *productService) UpdateProduct(ctx context.Context, id uuid.UUID, req dt
 	if req.Description != "" {
 		product.Description = req.Description
 	}
-	if req.Stock > 0 {
-		product.Stock = req.Stock
-	}
 
 	if err := s.repo.Update(ctx, product); err != nil {
 		return nil, err

@@ -22,6 +22,11 @@ func main() {
 		log.Fatal("PRODUCT_SERVICE_URL is not set")
 	}
 
+	inventoryServiceURL := os.Getenv("INVENTORY_SERVICE_URL")
+	if inventoryServiceURL == "" {
+		log.Fatal("INVENTORY_SERVICE_URL is not set")
+	}
+
 	tokenProvider, err := auth.NewHMACProvider(os.Getenv("JWT_SECRET"))
 	if err != nil {
 		log.Fatalf("failed to create token provider: %v", err)
@@ -37,12 +42,18 @@ func main() {
 		log.Fatalf("failed to create product service proxy: %v", err)
 	}
 
+	inventoryProxy, err := proxy.NewInventoryService(inventoryServiceURL)
+	if err != nil {
+		log.Fatalf("failed to create inventory service proxy: %v", err)
+	}
+
 	router := gin.Default()
 	routes.RegisterRoutes(router, routes.Dependencies{
-		UserServiceProxy:    userProxy,
-		ProductServiceProxy: productProxy,
-		AuthMiddleware:      middleware.Auth(tokenProvider),
-		RequireAdmin:        middleware.RequireRole(middleware.RoleAdmin),
+		UserServiceProxy:      userProxy,
+		ProductServiceProxy:   productProxy,
+		InventoryServiceProxy: inventoryProxy,
+		AuthMiddleware:        middleware.Auth(tokenProvider),
+		RequireAdmin:          middleware.RequireRole(middleware.RoleAdmin),
 	})
 
 	port := os.Getenv("PORT")

@@ -9,11 +9,14 @@ services:
       PORT: "8080"
       USER_SERVICE_URL: http://user-service:8080
       PRODUCT_SERVICE_URL: http://product-service:8080
+      INVENTORY_SERVICE_URL: http://inventory-service:8080
       JWT_SECRET: dev-secret-for-development
     depends_on:
       user-service:
         condition: service_started
       product-service:
+        condition: service_started
+      inventory-service:
         condition: service_started
 
   user-service:
@@ -35,6 +38,16 @@ services:
       dockerfile: Dockerfile
     environment:
       DATABASE_URL: postgres://postgres:postgres@postgres:5432/product_db?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+  
+  inventory-service:
+    build:
+      context: ./inventory-service
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/inventory_db?sslmode=disable
     depends_on:
       postgres:
         condition: service_healthy

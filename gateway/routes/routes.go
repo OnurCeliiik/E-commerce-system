@@ -8,10 +8,11 @@ import (
 )
 
 type Dependencies struct {
-	UserServiceProxy    *proxy.UserService
-	ProductServiceProxy *proxy.ProductService
-	AuthMiddleware      gin.HandlerFunc
-	RequireAdmin        gin.HandlerFunc
+	UserServiceProxy      *proxy.UserService
+	ProductServiceProxy   *proxy.ProductService
+	InventoryServiceProxy *proxy.InventoryService
+	AuthMiddleware        gin.HandlerFunc
+	RequireAdmin          gin.HandlerFunc
 }
 
 func RegisterRoutes(router *gin.Engine, deps Dependencies) {
@@ -24,6 +25,7 @@ func RegisterRoutes(router *gin.Engine, deps Dependencies) {
 
 		v1.GET("/products", deps.ProductServiceProxy.ServeHTTP)
 		v1.GET("/products/:id", deps.ProductServiceProxy.ServeHTTP)
+		v1.GET("/inventory/:product_id", deps.InventoryServiceProxy.ServeHTTP)
 
 		protected := v1.Group("")
 		protected.Use(deps.AuthMiddleware)
@@ -34,6 +36,8 @@ func RegisterRoutes(router *gin.Engine, deps Dependencies) {
 		admin.POST("/products", deps.ProductServiceProxy.ServeHTTP)
 		admin.PUT("/products/:id", deps.ProductServiceProxy.ServeHTTP)
 		admin.DELETE("/products/:id", deps.ProductServiceProxy.ServeHTTP)
+		admin.PUT("/inventory/:product_id", deps.InventoryServiceProxy.ServeHTTP)
+
 	}
 }
 
