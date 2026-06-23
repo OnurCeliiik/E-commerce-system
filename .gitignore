@@ -1,5 +1,6 @@
 # Agent-only context (not for GitHub)
 .agent-context.md
+.architecture.md
 docs/
 
 # Local Docker Compose overrides (copy from *.override.example.yml)
