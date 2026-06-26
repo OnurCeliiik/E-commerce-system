@@ -51,9 +51,12 @@ services:
       dockerfile: Dockerfile
     environment:
       DATABASE_URL: postgres://postgres:postgres@postgres:5432/inventory_db?sslmode=disable
+      KAFKA_BROKERS: kafka:19092
     depends_on:
       postgres:
         condition: service_healthy
+      kafka:
+        condition: service_started
 
   order-service:
     build:

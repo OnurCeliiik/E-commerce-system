@@ -1,10 +1,14 @@
 package main
 
 import (
+	"context"
 	"log"
+	"os"
+	"strings"
 
 	"github.com/OnurCeliiik/ecommerce/services/inventory/database"
 	"github.com/OnurCeliiik/ecommerce/services/inventory/handlers"
+	kafkasub "github.com/OnurCeliiik/ecommerce/services/inventory/kafka"
 	"github.com/OnurCeliiik/ecommerce/services/inventory/repository"
 	"github.com/OnurCeliiik/ecommerce/services/inventory/routes"
 	"github.com/OnurCeliiik/ecommerce/services/inventory/service"
@@ -27,6 +31,18 @@ func main() {
 	inventoryRepo := repository.NewInventoryRepository(db)
 	inventoryService := service.NewInventoryService(inventoryRepo)
 	inventoryHandler := handlers.NewInventoryHandler(inventoryService)
+
+	if brokers := strings.TrimSpace(os.Getenv("KAFKA_BROKERS")); brokers != "" {
+		consumer, err := kafkasub.NewOrderEventConsumer(brokers, inventoryService)
+		if err != nil {
+			log.Fatalf("failed to create kafka consumer: %v", err)
+		}
+		go func() {
+			if err := consumer.Run(context.Background()); err != nil {
+				log.Printf("kafka consumer stopped: %v", err)
+			}
+		}()
+	}
 
 	router := gin.Default()
 	routes.RegisterRoutes(router, routes.Dependencies{

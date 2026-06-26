@@ -61,3 +61,27 @@ func toInventoryResponse(item *model.InventoryItem) *dto.InventoryResponse {
 		UpdatedAt: item.UpdatedAt,
 	}
 }
+
+func (s *inventoryService) ProcessOrderCreated(ctx context.Context, event dto.OrderCreatedEvent) error {
+	for _, item := range event.Items {
+		inventoryItem, err := s.repo.FindByProductID(ctx, item.ProductID)
+		if err != nil {
+			if errors.Is(err, repository.ErrInventoryNotFound) {
+				return ErrInventoryNotFound
+			}
+			return err
+		}
+
+		if inventoryItem.Quantity < item.Quantity {
+			return ErrInsufficientInventory
+		}
+
+		inventoryItem.Quantity -= item.Quantity
+
+		if err := s.repo.Upsert(ctx, inventoryItem); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
