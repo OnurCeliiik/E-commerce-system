@@ -58,6 +58,19 @@ services:
       kafka:
         condition: service_started
 
+  notification-service:
+    build:
+      context: ./notification-service
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/notification_db?sslmode=disable
+      KAFKA_BROKERS: kafka:19092
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+
   order-service:
     build:
       context: ./order-service
