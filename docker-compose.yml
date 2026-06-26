@@ -63,10 +63,13 @@ services:
       DATABASE_URL: postgres://postgres:postgres@postgres:5432/order_db?sslmode=disable
       PRODUCT_SERVICE_URL: http://product-service:8080
       JWT_SECRET: dev-secret-for-development
+      KAFKA_BROKERS: kafka:19092
     depends_on:
       postgres:
         condition: service_healthy
       product-service:
+        condition: service_started
+      kafka:
         condition: service_started
 
   postgres:

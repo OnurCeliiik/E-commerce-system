@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"log"
 	"time"
 
 	"github.com/OnurCeliiik/ecommerce/services/order/catalog"
@@ -21,15 +22,24 @@ type ProductCatalog interface {
 	GetUnitPrice(ctx context.Context, productID uuid.UUID) (float64, error)
 }
 
-type orderService struct {
-	repo    OrderRepository
-	catalog ProductCatalog
+type OrderEventPublisher interface {
+	PublishOrderCreated(ctx context.Context, event dto.OrderCreatedEvent) error
 }
 
-func NewOrderService(repo OrderRepository, catalog ProductCatalog) *orderService {
+type orderService struct {
+	repo      OrderRepository
+	catalog   ProductCatalog
+	publisher OrderEventPublisher
+}
+
+func NewOrderService(
+	repo OrderRepository,
+	catalog ProductCatalog,
+	publisher OrderEventPublisher) *orderService {
 	return &orderService{
-		repo:    repo,
-		catalog: catalog,
+		repo:      repo,
+		catalog:   catalog,
+		publisher: publisher,
 	}
 }
 
@@ -52,28 +62,54 @@ func (s *orderService) CreateOrder(ctx context.Context, userID uuid.UUID, req dt
 		total += subtotal
 
 		lines = append(lines, model.OrderLine{
-			ID: uuid.New(),
-			OrderID: orderID,
+			ID:        uuid.New(),
+			OrderID:   orderID,
 			ProductID: item.ProductID,
-			Quantity: item.Quantity,
+			Quantity:  item.Quantity,
 			UnitPrice: unitPrice,
 		})
 	}
 
 	order := &model.Order{
-		ID: orderID,
-		UserID: userID,
-		Status: string(model.OrderStatusPending),
-		Total: total,
+		ID:        orderID,
+		UserID:    userID,
+		Status:    string(model.OrderStatusPending),
+		Total:     total,
 		CreatedAt: time.Now(),
-		Lines: lines,
+		Lines:     lines,
 	}
 
 	if err := s.repo.Create(ctx, order); err != nil {
 		return nil, err
 	}
 
+	if err := s.publisher.PublishOrderCreated(ctx, toOrderCreatedEvent(order)); err != nil {
+		log.Printf("publish order.created failed for order %s: %v", order.ID, err)
+	}
+
 	return toOrderResponse(order), nil
+}
+
+func toOrderCreatedEvent(order *model.Order) dto.OrderCreatedEvent {
+	items := make([]dto.OrderLineResponse, 0, len(order.Lines))
+	for i := range order.Lines {
+		line := order.Lines[i]
+		items = append(items, dto.OrderLineResponse{
+			ID:        line.ID,
+			ProductID: line.ProductID,
+			Quantity:  line.Quantity,
+			UnitPrice: line.UnitPrice,
+		})
+	}
+
+	return dto.OrderCreatedEvent{
+		OrderID:   order.ID,
+		UserID:    order.UserID,
+		Total:     order.Total,
+		Items:     items,
+		Status:    order.Status,
+		CreatedAt: order.CreatedAt,
+	}
 }
 
 func toOrderResponse(order *model.Order) *dto.OrderResponse {
