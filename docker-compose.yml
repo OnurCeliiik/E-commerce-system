@@ -10,6 +10,7 @@ services:
       USER_SERVICE_URL: http://user-service:8080
       PRODUCT_SERVICE_URL: http://product-service:8080
       INVENTORY_SERVICE_URL: http://inventory-service:8080
+      ORDER_SERVICE_URL: http://order-service:8080
       JWT_SECRET: dev-secret-for-development
     depends_on:
       user-service:
@@ -17,6 +18,8 @@ services:
       product-service:
         condition: service_started
       inventory-service:
+        condition: service_started
+      order-service:
         condition: service_started
 
   user-service:
@@ -51,6 +54,20 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+
+  order-service:
+    build:
+      context: ./order-service
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/order_db?sslmode=disable
+      PRODUCT_SERVICE_URL: http://product-service:8080
+      JWT_SECRET: dev-secret-for-development
+    depends_on:
+      postgres:
+        condition: service_healthy
+      product-service:
+        condition: service_started
 
   postgres:
     image: postgres:16-alpine

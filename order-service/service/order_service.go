@@ -2,8 +2,10 @@ package service
 
 import (
 	"context"
+	"errors"
 	"time"
 
+	"github.com/OnurCeliiik/ecommerce/services/order/catalog"
 	"github.com/OnurCeliiik/ecommerce/services/order/dto"
 	"github.com/OnurCeliiik/ecommerce/services/order/model"
 	"github.com/google/uuid"
@@ -40,7 +42,10 @@ func (s *orderService) CreateOrder(ctx context.Context, userID uuid.UUID, req dt
 	for _, item := range req.Items {
 		unitPrice, err := s.catalog.GetUnitPrice(ctx, item.ProductID)
 		if err != nil {
-			return nil, ErrProductNotFound
+			if errors.Is(err, catalog.ErrProductNotFound) {
+				return nil, ErrProductNotFound
+			}
+			return nil, err
 		}
 
 		subtotal := unitPrice * float64(item.Quantity)

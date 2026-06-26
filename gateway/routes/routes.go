@@ -11,6 +11,7 @@ type Dependencies struct {
 	UserServiceProxy      *proxy.UserService
 	ProductServiceProxy   *proxy.ProductService
 	InventoryServiceProxy *proxy.InventoryService
+	OrderServiceProxy     *proxy.OrderService
 	AuthMiddleware        gin.HandlerFunc
 	RequireAdmin          gin.HandlerFunc
 }
@@ -30,6 +31,7 @@ func RegisterRoutes(router *gin.Engine, deps Dependencies) {
 		protected := v1.Group("")
 		protected.Use(deps.AuthMiddleware)
 		protected.GET("/me", deps.UserServiceProxy.ServeHTTP)
+		protected.POST("/orders", deps.OrderServiceProxy.ServeHTTP)
 
 		admin := v1.Group("")
 		admin.Use(deps.AuthMiddleware, deps.RequireAdmin)

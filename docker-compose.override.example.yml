@@ -4,12 +4,12 @@
 #   cp docker-compose.override.example.yml docker-compose.override.yml
 #
 # Beekeeper / DBeaver connection:
-#   Host: localhost | Port: 5433 | User: postgres | Password: postgres | DB: user_db
+#   Host: localhost | Port: 5434 | User: postgres | Password: postgres
+#   Databases: user_db, product_db, inventory_db, order_db
 #
-# Host port 5433 avoids conflict with a local PostgreSQL install on 5432.
-# Change the left side (e.g. "5432:5432") if 5433 is also taken.
+# Use 5434 (not 5432) — 5432 is usually your system Postgres, not Docker.
 
 services:
   postgres:
     ports:
-      - "5433:5432"
+      - "5434:5432"

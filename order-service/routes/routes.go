@@ -7,8 +7,9 @@ import (
 )
 
 type Dependencies struct {
-	DB           *gorm.DB
-	OrderHandler *handlers.OrderHandler
+	DB              *gorm.DB
+	OrderHandler    *handlers.OrderHandler
+	AuthMiddleware  gin.HandlerFunc
 }
 
 func RegisterRoutes(router *gin.Engine, deps Dependencies) {
@@ -16,6 +17,8 @@ func RegisterRoutes(router *gin.Engine, deps Dependencies) {
 
 	v1 := router.Group("/api/v1")
 	{
-		v1.POST("/orders", deps.OrderHandler.CreateOrder)
+		protected := v1.Group("")
+		protected.Use(deps.AuthMiddleware)
+		protected.POST("/orders", deps.OrderHandler.CreateOrder)
 	}
 }
