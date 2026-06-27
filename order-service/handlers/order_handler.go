@@ -14,6 +14,7 @@ import (
 
 type OrderService interface {
 	CreateOrder(ctx context.Context, userID uuid.UUID, req dto.CreateOrderRequest) (*dto.OrderResponse, error)
+	GetOrder(ctx context.Context, userID, orderID uuid.UUID) (*dto.OrderResponse, error)
 }
 
 type OrderHandler struct {
@@ -49,4 +50,31 @@ func (h *OrderHandler) CreateOrder(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, resp)
+}
+
+func (h *OrderHandler) GetOrder(c *gin.Context) {
+	userID, ok := middleware.UserIDFromContext(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	orderID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid order id"})
+		return
+	}
+
+	resp, err := h.orderService.GetOrder(c.Request.Context(), userID, orderID)
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrOrderNotFound):
+			c.JSON(http.StatusNotFound, gin.H{"error": service.ErrOrderNotFound.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, resp)
 }

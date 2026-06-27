@@ -9,6 +9,7 @@ import (
 	"github.com/OnurCeliiik/ecommerce/services/order/catalog"
 	"github.com/OnurCeliiik/ecommerce/services/order/dto"
 	"github.com/OnurCeliiik/ecommerce/services/order/model"
+	"github.com/OnurCeliiik/ecommerce/services/order/repository"
 	"github.com/google/uuid"
 )
 
@@ -86,6 +87,22 @@ func (s *orderService) CreateOrder(ctx context.Context, userID uuid.UUID, req dt
 
 	if err := s.publisher.PublishOrderCreated(ctx, toOrderCreatedEvent(order)); err != nil {
 		log.Printf("publish order.created failed for order %s: %v", order.ID, err)
+	}
+
+	return toOrderResponse(order), nil
+}
+
+func (s *orderService) GetOrder(ctx context.Context, userID, orderID uuid.UUID) (*dto.OrderResponse, error) {
+	order, err := s.repo.FindByID(ctx, orderID)
+	if err != nil {
+		if errors.Is(err, repository.ErrOrderNotFound) {
+			return nil, ErrOrderNotFound
+		}
+		return nil, err
+	}
+
+	if order.UserID != userID {
+		return nil, ErrOrderNotFound
 	}
 
 	return toOrderResponse(order), nil

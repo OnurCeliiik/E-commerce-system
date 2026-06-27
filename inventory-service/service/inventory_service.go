@@ -22,13 +22,19 @@ type InventoryEventPublisher interface {
 	PublishInventoryReservationFailed(ctx context.Context, event dto.InventoryReservationFailedEvent) error
 }
 
-type inventoryService struct {
-	repo      InventoryRepository
-	publisher InventoryEventPublisher
+type ProcessedOrderRepository interface {
+	TryClaim(ctx context.Context, orderID uuid.UUID) (bool, error)
+	SetOutcome(ctx context.Context, orderID uuid.UUID, outcome string) error
 }
 
-func NewInventoryService(repo InventoryRepository, publisher InventoryEventPublisher) *inventoryService {
-	return &inventoryService{repo: repo, publisher: publisher}
+type inventoryService struct {
+	repo          InventoryRepository
+	processedRepo ProcessedOrderRepository
+	publisher     InventoryEventPublisher
+}
+
+func NewInventoryService(repo InventoryRepository, processedRepo ProcessedOrderRepository, publisher InventoryEventPublisher) *inventoryService {
+	return &inventoryService{repo: repo, processedRepo: processedRepo, publisher: publisher}
 }
 
 func (s *inventoryService) GetInventory(ctx context.Context, productID uuid.UUID) (*dto.InventoryResponse, error) {
@@ -70,7 +76,18 @@ func toInventoryResponse(item *model.InventoryItem) *dto.InventoryResponse {
 }
 
 func (s *inventoryService) ProcessOrderCreated(ctx context.Context, event dto.OrderCreatedEvent) error {
+	claimed, err := s.processedRepo.TryClaim(ctx, event.OrderID)
+	if err != nil {
+		return err
+	}
+	if !claimed {
+		log.Printf("skip duplicate order.created order_id=%s", event.OrderID)
+		return nil
+	}
+
 	if err := s.reserveStock(ctx, event); err != nil {
+		_ = s.processedRepo.SetOutcome(ctx, event.OrderID, "failed")
+
 		failEvent := dto.InventoryReservationFailedEvent{
 			OrderID: event.OrderID,
 			UserID:  event.UserID,
@@ -81,6 +98,8 @@ func (s *inventoryService) ProcessOrderCreated(ctx context.Context, event dto.Or
 		}
 		return err
 	}
+
+	_ = s.processedRepo.SetOutcome(ctx, event.OrderID, "reserved")
 
 	reservedEvent := dto.InventoryReservedEvent{
 		OrderID: event.OrderID,

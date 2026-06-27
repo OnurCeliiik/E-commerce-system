@@ -36,5 +36,6 @@ func ConnectDB() (*gorm.DB, error) {
 func MigrateDB(db *gorm.DB) error {
 	return db.AutoMigrate(
 		&model.InventoryItem{},
+		&model.ProcessedOrder{},
 	)
 }

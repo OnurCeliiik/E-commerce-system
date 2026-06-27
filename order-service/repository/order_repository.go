@@ -26,7 +26,7 @@ func (r *orderRepository) Create(ctx context.Context, order *model.Order) error 
 func (r *orderRepository) FindByID(ctx context.Context, id uuid.UUID) (*model.Order, error) {
 	var order model.Order
 
-	err := r.db.WithContext(ctx).Where("id = ?", id).First(&order).Error
+	err := r.db.WithContext(ctx).Preload("Lines").Where("id = ?", id).First(&order).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, ErrOrderNotFound
 	}

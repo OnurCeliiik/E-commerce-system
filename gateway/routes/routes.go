@@ -32,6 +32,7 @@ func RegisterRoutes(router *gin.Engine, deps Dependencies) {
 		protected.Use(deps.AuthMiddleware)
 		protected.GET("/me", deps.UserServiceProxy.ServeHTTP)
 		protected.POST("/orders", deps.OrderServiceProxy.ServeHTTP)
+		protected.GET("/orders/:id", deps.OrderServiceProxy.ServeHTTP)
 
 		admin := v1.Group("")
 		admin.Use(deps.AuthMiddleware, deps.RequireAdmin)

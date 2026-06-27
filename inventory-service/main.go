@@ -29,6 +29,7 @@ func main() {
 	}
 
 	inventoryRepo := repository.NewInventoryRepository(db)
+	processedRepo := repository.NewProcessedOrderRepository(db)
 
 	var publisher service.InventoryEventPublisher = kafkasub.NoopPublisher{}
 	if brokers := strings.TrimSpace(os.Getenv("KAFKA_BROKERS")); brokers != "" {
@@ -39,7 +40,7 @@ func main() {
 		publisher = kafkaPublisher
 	}
 
-	inventoryService := service.NewInventoryService(inventoryRepo, publisher)
+	inventoryService := service.NewInventoryService(inventoryRepo, processedRepo, publisher)
 	inventoryHandler := handlers.NewInventoryHandler(inventoryService)
 
 	if brokers := strings.TrimSpace(os.Getenv("KAFKA_BROKERS")); brokers != "" {
