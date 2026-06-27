@@ -21,5 +21,6 @@ func RegisterRoutes(router *gin.Engine, deps Dependencies) {
 		protected.Use(deps.AuthMiddleware)
 		protected.POST("/orders", deps.OrderHandler.CreateOrder)
 		protected.GET("/orders/:id", deps.OrderHandler.GetOrder)
+		protected.GET("/orders/me", deps.OrderHandler.GetOrders)
 	}
 }

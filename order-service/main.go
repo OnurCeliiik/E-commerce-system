@@ -15,6 +15,7 @@ import (
 	"github.com/OnurCeliiik/ecommerce/services/order/repository"
 	"github.com/OnurCeliiik/ecommerce/services/order/routes"
 	"github.com/OnurCeliiik/ecommerce/services/order/service"
+	orderusers "github.com/OnurCeliiik/ecommerce/services/order/users"
 	"github.com/gin-gonic/gin"
 )
 
@@ -30,10 +31,12 @@ func main() {
 	}
 
 	serviceURL := os.Getenv("PRODUCT_SERVICE_URL")
+	userServiceURL := os.Getenv("USER_SERVICE_URL")
 	secret := os.Getenv("JWT_SECRET")
 
 	orderRepo := repository.NewOrderRepository(db)
 	catalogClient := catalog.NewHTTPProductClient(serviceURL)
+	userClient := orderusers.NewHTTPUserClient(userServiceURL)
 
 	var publisher service.OrderEventPublisher = kafkapub.NoopPublisher{}
 	if brokers := strings.TrimSpace(os.Getenv("KAFKA_BROKERS")); brokers != "" {
@@ -44,7 +47,7 @@ func main() {
 		publisher = kafkaPublisher
 	}
 
-	orderSvc := service.NewOrderService(orderRepo, catalogClient, publisher)
+	orderSvc := service.NewOrderService(orderRepo, catalogClient, userClient, publisher)
 	orderHandler := handlers.NewOrderHandler(orderSvc)
 
 	if brokers := strings.TrimSpace(os.Getenv("KAFKA_BROKERS")); brokers != "" {

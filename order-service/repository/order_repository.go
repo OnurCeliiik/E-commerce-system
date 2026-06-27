@@ -48,3 +48,17 @@ func (r *orderRepository) UpdateStatus(ctx context.Context, id uuid.UUID, status
 	}
 	return nil
 }
+
+func (r *orderRepository) FindByUserID(ctx context.Context, userID uuid.UUID) ([]*model.Order, error) {
+	var orders []*model.Order
+
+	err := r.db.WithContext(ctx).Preload("Lines").
+		Where("user_id = ?", userID).
+		Order("created_at DESC").
+		Find(&orders).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return orders, nil
+}

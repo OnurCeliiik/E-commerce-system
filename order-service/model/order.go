@@ -18,9 +18,10 @@ var (
 )
 
 type Order struct {
-	ID        uuid.UUID   `gorm:"type:uuid;primaryKey" json:"id"`
-	UserID    uuid.UUID   `gorm:"type:uuid;not null" json:"user_id"`
-	Status    string      `gorm:"not null" json:"status"`
+	ID            uuid.UUID   `gorm:"type:uuid;primaryKey" json:"id"`
+	UserID        uuid.UUID   `gorm:"type:uuid;not null" json:"user_id"`
+	CustomerEmail string      `gorm:"not null" json:"customer_email"`
+	Status        string      `gorm:"not null" json:"status"`
 	Total     float64     `gorm:"not null" json:"total"`
 	CreatedAt time.Time   `json:"created_at"`
 	UpdatedAt time.Time   `json:"updated_at"`

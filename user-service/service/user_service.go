@@ -114,3 +114,15 @@ func (s *userService) Me(ctx context.Context, userID uuid.UUID) (*dto.MeResponse
 		Role:      string(user.Role),
 	}, nil
 }
+
+func (s *userService) GetUserEmail(ctx context.Context, userID uuid.UUID) (string, error) {
+	user, err := s.repo.FindByID(ctx, userID)
+	if err != nil {
+		if errors.Is(err, repository.ErrUserNotFound) {
+			return "", ErrUserNotFound
+		}
+		return "", err
+	}
+
+	return user.Email, nil
+}

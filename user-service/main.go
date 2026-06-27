@@ -8,6 +8,7 @@ import (
 	"github.com/OnurCeliiik/ecommerce/services/user/auth"
 	"github.com/OnurCeliiik/ecommerce/services/user/database"
 	"github.com/OnurCeliiik/ecommerce/services/user/handlers"
+	"github.com/OnurCeliiik/ecommerce/services/user/middleware"
 	"github.com/OnurCeliiik/ecommerce/services/user/repository"
 	"github.com/OnurCeliiik/ecommerce/services/user/routes"
 	"github.com/OnurCeliiik/ecommerce/services/user/service"
@@ -39,9 +40,10 @@ func main() {
 
 	router := gin.Default()
 	routes.RegisterRoutes(router, routes.Dependencies{
-		DB:             db,
-		UserHandler:    userHandler,
-		TokenValidator: tokenProvider,
+		DB:                     db,
+		UserHandler:            userHandler,
+		TokenValidator:         tokenProvider,
+		InternalAuthMiddleware: middleware.RequireInternalSecret(),
 	})
 
 	if err := router.Run(":8080"); err != nil {

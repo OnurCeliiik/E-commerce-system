@@ -89,9 +89,10 @@ func (s *inventoryService) ProcessOrderCreated(ctx context.Context, event dto.Or
 		_ = s.processedRepo.SetOutcome(ctx, event.OrderID, "failed")
 
 		failEvent := dto.InventoryReservationFailedEvent{
-			OrderID: event.OrderID,
-			UserID:  event.UserID,
-			Reason:  failureReason(err),
+			OrderID:       event.OrderID,
+			UserID:        event.UserID,
+			CustomerEmail: event.CustomerEmail,
+			Reason:        failureReason(err),
 		}
 		if pubErr := s.publisher.PublishInventoryReservationFailed(ctx, failEvent); pubErr != nil {
 			log.Printf("publish inventory.reservation_failed failed for order %s: %v", event.OrderID, pubErr)
@@ -102,10 +103,11 @@ func (s *inventoryService) ProcessOrderCreated(ctx context.Context, event dto.Or
 	_ = s.processedRepo.SetOutcome(ctx, event.OrderID, "reserved")
 
 	reservedEvent := dto.InventoryReservedEvent{
-		OrderID: event.OrderID,
-		UserID:  event.UserID,
-		Total:   event.Total,
-		Items:   event.Items,
+		OrderID:       event.OrderID,
+		UserID:        event.UserID,
+		CustomerEmail: event.CustomerEmail,
+		Total:         event.Total,
+		Items:         event.Items,
 	}
 	if err := s.publisher.PublishInventoryReserved(ctx, reservedEvent); err != nil {
 		log.Printf("publish inventory.reserved failed for order %s: %v", event.OrderID, err)

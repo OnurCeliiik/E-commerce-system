@@ -10,6 +10,7 @@ import (
 	"github.com/OnurCeliiik/ecommerce/services/order/dto"
 	"github.com/OnurCeliiik/ecommerce/services/order/model"
 	"github.com/OnurCeliiik/ecommerce/services/order/repository"
+	"github.com/OnurCeliiik/ecommerce/services/order/users"
 	"github.com/google/uuid"
 )
 
@@ -18,10 +19,15 @@ type OrderRepository interface {
 	Create(ctx context.Context, order *model.Order) error
 	FindByID(ctx context.Context, id uuid.UUID) (*model.Order, error)
 	UpdateStatus(ctx context.Context, id uuid.UUID, status string) error
+	FindByUserID(ctx context.Context, userID uuid.UUID) ([]*model.Order, error)
 }
 
 type ProductCatalog interface {
 	GetUnitPrice(ctx context.Context, productID uuid.UUID) (float64, error)
+}
+
+type UserDirectory interface {
+	GetUserEmail(ctx context.Context, userID uuid.UUID) (string, error)
 }
 
 type OrderEventPublisher interface {
@@ -31,21 +37,31 @@ type OrderEventPublisher interface {
 type orderService struct {
 	repo      OrderRepository
 	catalog   ProductCatalog
+	users     UserDirectory
 	publisher OrderEventPublisher
 }
 
 func NewOrderService(
 	repo OrderRepository,
 	catalog ProductCatalog,
+	users UserDirectory,
 	publisher OrderEventPublisher) *orderService {
 	return &orderService{
 		repo:      repo,
 		catalog:   catalog,
+		users:     users,
 		publisher: publisher,
 	}
 }
 
 func (s *orderService) CreateOrder(ctx context.Context, userID uuid.UUID, req dto.CreateOrderRequest) (*dto.OrderResponse, error) {
+	customerEmail, err := s.users.GetUserEmail(ctx, userID)
+	if err != nil {
+		if errors.Is(err, users.ErrUserNotFound) {
+			return nil, ErrUserNotFound
+		}
+		return nil, err
+	}
 
 	orderID := uuid.New()
 	lines := make([]model.OrderLine, 0, len(req.Items))
@@ -73,9 +89,10 @@ func (s *orderService) CreateOrder(ctx context.Context, userID uuid.UUID, req dt
 	}
 
 	order := &model.Order{
-		ID:        orderID,
-		UserID:    userID,
-		Status:    string(model.OrderStatusPending),
+		ID:            orderID,
+		UserID:        userID,
+		CustomerEmail: customerEmail,
+		Status:        string(model.OrderStatusPending),
 		Total:     total,
 		CreatedAt: time.Now(),
 		Lines:     lines,
@@ -129,9 +146,10 @@ func toOrderCreatedEvent(order *model.Order) dto.OrderCreatedEvent {
 	}
 
 	return dto.OrderCreatedEvent{
-		OrderID:   order.ID,
-		UserID:    order.UserID,
-		Total:     order.Total,
+		OrderID:       order.ID,
+		UserID:        order.UserID,
+		CustomerEmail: order.CustomerEmail,
+		Total:         order.Total,
 		Items:     items,
 		Status:    order.Status,
 		CreatedAt: order.CreatedAt,
@@ -158,4 +176,21 @@ func toOrderResponse(order *model.Order) *dto.OrderResponse {
 		Items:     items,
 		CreatedAt: order.CreatedAt,
 	}
+}
+
+func (s *orderService) GetOrders(ctx context.Context, userID uuid.UUID) ([]*dto.OrderResponse, error) {
+	orders, err := s.repo.FindByUserID(ctx, userID)
+	if err != nil {
+		if errors.Is(err, repository.ErrOrderNotFound) {
+			return nil, ErrOrderNotFound
+		}
+		return nil, err
+	}
+
+	resp := make([]*dto.OrderResponse, 0, len(orders))
+	for i := range orders {
+		resp = append(resp, toOrderResponse(orders[i]))
+	}
+
+	return resp, nil
 }

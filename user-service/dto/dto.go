@@ -36,3 +36,7 @@ type MeResponse struct {
 	Email     string `json:"email"`
 	Role      string `json:"role"`
 }
+
+type InternalUserResponse struct {
+	Email string `json:"email"`
+}

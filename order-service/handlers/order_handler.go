@@ -15,6 +15,7 @@ import (
 type OrderService interface {
 	CreateOrder(ctx context.Context, userID uuid.UUID, req dto.CreateOrderRequest) (*dto.OrderResponse, error)
 	GetOrder(ctx context.Context, userID, orderID uuid.UUID) (*dto.OrderResponse, error)
+	GetOrders(ctx context.Context, userID uuid.UUID) ([]*dto.OrderResponse, error)
 }
 
 type OrderHandler struct {
@@ -43,6 +44,8 @@ func (h *OrderHandler) CreateOrder(c *gin.Context) {
 		switch {
 		case errors.Is(err, service.ErrProductNotFound):
 			c.JSON(http.StatusNotFound, gin.H{"error": service.ErrProductNotFound.Error()})
+		case errors.Is(err, service.ErrUserNotFound):
+			c.JSON(http.StatusNotFound, gin.H{"error": service.ErrUserNotFound.Error()})
 		default:
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 		}
@@ -77,4 +80,26 @@ func (h *OrderHandler) GetOrder(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, resp)
+}
+
+func (h *OrderHandler) GetOrders(c *gin.Context) {
+	userID, ok := middleware.UserIDFromContext(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	orders, err := h.orderService.GetOrders(c.Request.Context(), userID)
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrOrderNotFound):
+			c.JSON(http.StatusNotFound, gin.H{"error": service.ErrOrderNotFound.Error()})
+			return
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+			return
+		}
+	}
+
+	c.JSON(http.StatusOK, orders)
 }

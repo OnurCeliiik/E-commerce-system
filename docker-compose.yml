@@ -29,6 +29,7 @@ services:
     environment:
       DATABASE_URL: postgres://postgres:postgres@postgres:5432/user_db?sslmode=disable
       JWT_SECRET: dev-secret-for-development
+      INTERNAL_SERVICE_SECRET: dev-internal-secret
       ADMIN_EMAIL: admin@example.com
       ADMIN_PASSWORD: admin-secret
     depends_on:
@@ -78,12 +79,16 @@ services:
     environment:
       DATABASE_URL: postgres://postgres:postgres@postgres:5432/order_db?sslmode=disable
       PRODUCT_SERVICE_URL: http://product-service:8080
+      USER_SERVICE_URL: http://user-service:8080
+      INTERNAL_SERVICE_SECRET: dev-internal-secret
       JWT_SECRET: dev-secret-for-development
       KAFKA_BROKERS: kafka:19092
     depends_on:
       postgres:
         condition: service_healthy
       product-service:
+        condition: service_started
+      user-service:
         condition: service_started
       kafka:
         condition: service_started

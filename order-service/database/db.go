@@ -33,6 +33,14 @@ func ConnectDB() (*gorm.DB, error) {
 }
 
 func MigrateDB(db *gorm.DB) error {
+	// Backfill-safe migration for customer_email on existing databases.
+	if err := db.Exec(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_email text DEFAULT ''`).Error; err != nil {
+		return err
+	}
+	if err := db.Exec(`UPDATE orders SET customer_email = '' WHERE customer_email IS NULL`).Error; err != nil {
+		return err
+	}
+
 	return db.AutoMigrate(
 		&model.Order{},
 		&model.OrderLine{},

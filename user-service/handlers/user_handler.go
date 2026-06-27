@@ -16,6 +16,7 @@ type UserService interface {
 	Register(ctx context.Context, req dto.RegisterUserRequest) (*dto.RegisterUserResponse, error)
 	Login(ctx context.Context, req dto.LoginUserRequest) (*dto.LoginUserResponse, error)
 	Me(ctx context.Context, userID uuid.UUID) (*dto.MeResponse, error)
+	GetUserEmail(ctx context.Context, userID uuid.UUID) (string, error)
 }
 
 type UserHandler struct {
@@ -90,4 +91,25 @@ func (h *UserHandler) Me(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, user)
+}
+
+func (h *UserHandler) GetUserEmailInternal(c *gin.Context) {
+	userID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
+		return
+	}
+
+	email, err := h.userService.GetUserEmail(c.Request.Context(), userID)
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrUserNotFound):
+			c.JSON(http.StatusNotFound, gin.H{"error": service.ErrUserNotFound.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.InternalUserResponse{Email: email})
 }

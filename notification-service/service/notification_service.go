@@ -25,7 +25,7 @@ func NewNotificationService(emailSender EmailSender) *notificationService {
 
 func (s *notificationService) ProcessInventoryReserved(ctx context.Context, event dto.InventoryReservedEvent) error {
 	msg := email.Message{
-		To:      recipientForUser(event.UserID),
+		To:      recipientEmail(event.CustomerEmail, event.UserID),
 		Subject: fmt.Sprintf("Order confirmed — %s", event.OrderID),
 		Body:    buildOrderConfirmedBody(event),
 	}
@@ -34,14 +34,17 @@ func (s *notificationService) ProcessInventoryReserved(ctx context.Context, even
 
 func (s *notificationService) ProcessInventoryReservationFailed(ctx context.Context, event dto.InventoryReservationFailedEvent) error {
 	msg := email.Message{
-		To:      recipientForUser(event.UserID),
+		To:      recipientEmail(event.CustomerEmail, event.UserID),
 		Subject: fmt.Sprintf("Order could not be fulfilled — %s", event.OrderID),
 		Body:    buildOrderFailedBody(event),
 	}
 	return s.emailSender.Send(ctx, msg)
 }
 
-func recipientForUser(userID uuid.UUID) string {
+func recipientEmail(customerEmail string, userID uuid.UUID) string {
+	if customerEmail != "" {
+		return customerEmail
+	}
 	return fmt.Sprintf("user-%s@stub.local", userID)
 }
 

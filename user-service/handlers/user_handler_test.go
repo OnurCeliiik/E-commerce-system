@@ -16,9 +16,10 @@ import (
 )
 
 type mockUserService struct {
-	register func(ctx context.Context, req dto.RegisterUserRequest) (*dto.RegisterUserResponse, error)
-	login    func(ctx context.Context, req dto.LoginUserRequest) (*dto.LoginUserResponse, error)
-	me       func(ctx context.Context, userID uuid.UUID) (*dto.MeResponse, error)
+	register     func(ctx context.Context, req dto.RegisterUserRequest) (*dto.RegisterUserResponse, error)
+	login        func(ctx context.Context, req dto.LoginUserRequest) (*dto.LoginUserResponse, error)
+	me           func(ctx context.Context, userID uuid.UUID) (*dto.MeResponse, error)
+	getUserEmail func(ctx context.Context, userID uuid.UUID) (string, error)
 }
 
 func (m *mockUserService) Register(ctx context.Context, req dto.RegisterUserRequest) (*dto.RegisterUserResponse, error) {
@@ -31,6 +32,10 @@ func (m *mockUserService) Login(ctx context.Context, req dto.LoginUserRequest) (
 
 func (m *mockUserService) Me(ctx context.Context, userID uuid.UUID) (*dto.MeResponse, error) {
 	return m.me(ctx, userID)
+}
+
+func (m *mockUserService) GetUserEmail(ctx context.Context, userID uuid.UUID) (string, error) {
+	return m.getUserEmail(ctx, userID)
 }
 
 func init() {
