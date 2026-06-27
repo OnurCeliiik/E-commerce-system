@@ -31,13 +31,22 @@ func main() {
 	notificationService := service.NewNotificationService(emailSender)
 
 	if brokers := strings.TrimSpace(os.Getenv("KAFKA_BROKERS")); brokers != "" {
-		consumer, err := kafkasub.NewOrderEventConsumer(brokers, notificationService)
+		reservedConsumer, err := kafkasub.NewInventoryReservedConsumer(brokers, notificationService)
 		if err != nil {
-			log.Fatalf("failed to create kafka consumer: %v", err)
+			log.Fatalf("failed to create inventory.reserved consumer: %v", err)
+		}
+		failedConsumer, err := kafkasub.NewInventoryReservationFailedConsumer(brokers, notificationService)
+		if err != nil {
+			log.Fatalf("failed to create inventory.reservation_failed consumer: %v", err)
 		}
 		go func() {
-			if err := consumer.Run(context.Background()); err != nil {
-				log.Printf("kafka consumer stopped: %v", err)
+			if err := reservedConsumer.Run(context.Background()); err != nil {
+				log.Printf("inventory.reserved consumer stopped: %v", err)
+			}
+		}()
+		go func() {
+			if err := failedConsumer.Run(context.Background()); err != nil {
+				log.Printf("inventory.reservation_failed consumer stopped: %v", err)
 			}
 		}()
 	}

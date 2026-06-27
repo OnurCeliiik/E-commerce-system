@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"log"
 	"time"
 
 	"github.com/OnurCeliiik/ecommerce/services/inventory/dto"
@@ -16,12 +17,18 @@ type InventoryRepository interface {
 	Upsert(ctx context.Context, item *model.InventoryItem) error
 }
 
-type inventoryService struct {
-	repo InventoryRepository
+type InventoryEventPublisher interface {
+	PublishInventoryReserved(ctx context.Context, event dto.InventoryReservedEvent) error
+	PublishInventoryReservationFailed(ctx context.Context, event dto.InventoryReservationFailedEvent) error
 }
 
-func NewInventoryService(repo InventoryRepository) *inventoryService {
-	return &inventoryService{repo: repo}
+type inventoryService struct {
+	repo      InventoryRepository
+	publisher InventoryEventPublisher
+}
+
+func NewInventoryService(repo InventoryRepository, publisher InventoryEventPublisher) *inventoryService {
+	return &inventoryService{repo: repo, publisher: publisher}
 }
 
 func (s *inventoryService) GetInventory(ctx context.Context, productID uuid.UUID) (*dto.InventoryResponse, error) {
@@ -63,6 +70,32 @@ func toInventoryResponse(item *model.InventoryItem) *dto.InventoryResponse {
 }
 
 func (s *inventoryService) ProcessOrderCreated(ctx context.Context, event dto.OrderCreatedEvent) error {
+	if err := s.reserveStock(ctx, event); err != nil {
+		failEvent := dto.InventoryReservationFailedEvent{
+			OrderID: event.OrderID,
+			UserID:  event.UserID,
+			Reason:  failureReason(err),
+		}
+		if pubErr := s.publisher.PublishInventoryReservationFailed(ctx, failEvent); pubErr != nil {
+			log.Printf("publish inventory.reservation_failed failed for order %s: %v", event.OrderID, pubErr)
+		}
+		return err
+	}
+
+	reservedEvent := dto.InventoryReservedEvent{
+		OrderID: event.OrderID,
+		UserID:  event.UserID,
+		Total:   event.Total,
+		Items:   event.Items,
+	}
+	if err := s.publisher.PublishInventoryReserved(ctx, reservedEvent); err != nil {
+		log.Printf("publish inventory.reserved failed for order %s: %v", event.OrderID, err)
+	}
+
+	return nil
+}
+
+func (s *inventoryService) reserveStock(ctx context.Context, event dto.OrderCreatedEvent) error {
 	for _, item := range event.Items {
 		inventoryItem, err := s.repo.FindByProductID(ctx, item.ProductID)
 		if err != nil {
@@ -84,4 +117,15 @@ func (s *inventoryService) ProcessOrderCreated(ctx context.Context, event dto.Or
 	}
 
 	return nil
+}
+
+func failureReason(err error) string {
+	switch {
+	case errors.Is(err, ErrInventoryNotFound):
+		return "inventory_not_found"
+	case errors.Is(err, ErrInsufficientInventory):
+		return "insufficient_inventory"
+	default:
+		return "unknown"
+	}
 }

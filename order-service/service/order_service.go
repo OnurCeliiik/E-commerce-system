@@ -16,6 +16,7 @@ import (
 type OrderRepository interface {
 	Create(ctx context.Context, order *model.Order) error
 	FindByID(ctx context.Context, id uuid.UUID) (*model.Order, error)
+	UpdateStatus(ctx context.Context, id uuid.UUID, status string) error
 }
 
 type ProductCatalog interface {
@@ -88,6 +89,14 @@ func (s *orderService) CreateOrder(ctx context.Context, userID uuid.UUID, req dt
 	}
 
 	return toOrderResponse(order), nil
+}
+
+func (s *orderService) ProcessInventoryReserved(ctx context.Context, event dto.InventoryReservedEvent) error {
+	return s.repo.UpdateStatus(ctx, event.OrderID, string(model.OrderStatusConfirmed))
+}
+
+func (s *orderService) ProcessInventoryReservationFailed(ctx context.Context, event dto.InventoryReservationFailedEvent) error {
+	return s.repo.UpdateStatus(ctx, event.OrderID, string(model.OrderStatusFailed))
 }
 
 func toOrderCreatedEvent(order *model.Order) dto.OrderCreatedEvent {

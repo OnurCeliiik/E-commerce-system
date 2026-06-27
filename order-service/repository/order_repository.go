@@ -37,3 +37,14 @@ func (r *orderRepository) FindByID(ctx context.Context, id uuid.UUID) (*model.Or
 	return &order, nil
 
 }
+
+func (r *orderRepository) UpdateStatus(ctx context.Context, id uuid.UUID, status string) error {
+	result := r.db.WithContext(ctx).Model(&model.Order{}).Where("id = ?", id).Update("status", status)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return ErrOrderNotFound
+	}
+	return nil
+}

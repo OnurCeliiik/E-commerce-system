@@ -29,7 +29,17 @@ func main() {
 	}
 
 	inventoryRepo := repository.NewInventoryRepository(db)
-	inventoryService := service.NewInventoryService(inventoryRepo)
+
+	var publisher service.InventoryEventPublisher = kafkasub.NoopPublisher{}
+	if brokers := strings.TrimSpace(os.Getenv("KAFKA_BROKERS")); brokers != "" {
+		kafkaPublisher, err := kafkasub.NewInventoryEventPublisher(brokers)
+		if err != nil {
+			log.Fatalf("failed to create kafka publisher: %v", err)
+		}
+		publisher = kafkaPublisher
+	}
+
+	inventoryService := service.NewInventoryService(inventoryRepo, publisher)
 	inventoryHandler := handlers.NewInventoryHandler(inventoryService)
 
 	if brokers := strings.TrimSpace(os.Getenv("KAFKA_BROKERS")); brokers != "" {

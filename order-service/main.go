@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 	"strings"
@@ -45,6 +46,27 @@ func main() {
 
 	orderSvc := service.NewOrderService(orderRepo, catalogClient, publisher)
 	orderHandler := handlers.NewOrderHandler(orderSvc)
+
+	if brokers := strings.TrimSpace(os.Getenv("KAFKA_BROKERS")); brokers != "" {
+		reservedConsumer, err := kafkapub.NewInventoryReservedConsumer(brokers, orderSvc)
+		if err != nil {
+			log.Fatalf("failed to create inventory.reserved consumer: %v", err)
+		}
+		failedConsumer, err := kafkapub.NewInventoryReservationFailedConsumer(brokers, orderSvc)
+		if err != nil {
+			log.Fatalf("failed to create inventory.reservation_failed consumer: %v", err)
+		}
+		go func() {
+			if err := reservedConsumer.Run(context.Background()); err != nil {
+				log.Printf("inventory.reserved consumer stopped: %v", err)
+			}
+		}()
+		go func() {
+			if err := failedConsumer.Run(context.Background()); err != nil {
+				log.Printf("inventory.reservation_failed consumer stopped: %v", err)
+			}
+		}()
+	}
 
 	tokenProvider, err := auth.NewHMACProvider(secret)
 	if err != nil {

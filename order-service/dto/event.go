@@ -14,3 +14,16 @@ type OrderCreatedEvent struct {
 	Status    string              `json:"status"`
 	CreatedAt time.Time           `json:"created_at"`
 }
+
+type InventoryReservedEvent struct {
+	OrderID uuid.UUID           `json:"order_id"`
+	UserID  uuid.UUID           `json:"user_id"`
+	Total   float64             `json:"total"`
+	Items   []OrderLineResponse `json:"items"`
+}
+
+type InventoryReservationFailedEvent struct {
+	OrderID uuid.UUID `json:"order_id"`
+	UserID  uuid.UUID `json:"user_id"`
+	Reason  string    `json:"reason"`
+}
