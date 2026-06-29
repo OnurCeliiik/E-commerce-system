@@ -8,6 +8,7 @@ import (
 
 	"github.com/OnurCeliiik/ecommerce/services/order/catalog"
 	"github.com/OnurCeliiik/ecommerce/services/order/dto"
+	"github.com/OnurCeliiik/ecommerce/services/order/metrics"
 	"github.com/OnurCeliiik/ecommerce/services/order/model"
 	"github.com/OnurCeliiik/ecommerce/services/order/repository"
 	"github.com/OnurCeliiik/ecommerce/services/order/users"
@@ -126,11 +127,23 @@ func (s *orderService) GetOrder(ctx context.Context, userID, orderID uuid.UUID) 
 }
 
 func (s *orderService) ProcessInventoryReserved(ctx context.Context, event dto.InventoryReservedEvent) error {
-	return s.updateOrderStatusIfNotTerminal(ctx, event.OrderID, string(model.OrderStatusConfirmed))
+	err := s.updateOrderStatusIfNotTerminal(ctx, event.OrderID, string(model.OrderStatusConfirmed))
+	if err != nil {
+		metrics.RecordInventoryEvent("reserved", "error")
+		return err
+	}
+	metrics.RecordInventoryEvent("reserved", "success")
+	return nil
 }
 
 func (s *orderService) ProcessInventoryReservationFailed(ctx context.Context, event dto.InventoryReservationFailedEvent) error {
-	return s.updateOrderStatusIfNotTerminal(ctx, event.OrderID, string(model.OrderStatusFailed))
+	err := s.updateOrderStatusIfNotTerminal(ctx, event.OrderID, string(model.OrderStatusFailed))
+	if err != nil {
+		metrics.RecordInventoryEvent("reservation_failed", "error")
+		return err
+	}
+	metrics.RecordInventoryEvent("reservation_failed", "success")
+	return nil
 }
 
 func (s *orderService) updateOrderStatusIfNotTerminal(ctx context.Context, orderID uuid.UUID, status string) error {

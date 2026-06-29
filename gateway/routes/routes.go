@@ -3,8 +3,10 @@ package routes
 import (
 	"net/http"
 
+	"github.com/OnurCeliiik/ecommerce/gateway/middleware"
 	"github.com/OnurCeliiik/ecommerce/gateway/proxy"
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 type Dependencies struct {
@@ -17,7 +19,9 @@ type Dependencies struct {
 }
 
 func RegisterRoutes(router *gin.Engine, deps Dependencies) {
+	router.Use(middleware.PrometheusMiddleware())
 	router.GET("/health", healthCheck)
+	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	v1 := router.Group("/api/v1")
 	{

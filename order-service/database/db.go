@@ -33,12 +33,22 @@ func ConnectDB() (*gorm.DB, error) {
 }
 
 func MigrateDB(db *gorm.DB) error {
-	// Backfill-safe migration for customer_email on existing databases.
-	if err := db.Exec(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_email text DEFAULT ''`).Error; err != nil {
+	var tableExists bool
+	if err := db.Raw(`SELECT EXISTS (
+		SELECT FROM information_schema.tables
+		WHERE table_schema = CURRENT_SCHEMA() AND table_name = 'orders'
+	)`).Scan(&tableExists).Error; err != nil {
 		return err
 	}
-	if err := db.Exec(`UPDATE orders SET customer_email = '' WHERE customer_email IS NULL`).Error; err != nil {
-		return err
+
+	if tableExists {
+		// Backfill-safe migration for customer_email on existing databases.
+		if err := db.Exec(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_email text DEFAULT ''`).Error; err != nil {
+			return err
+		}
+		if err := db.Exec(`UPDATE orders SET customer_email = '' WHERE customer_email IS NULL`).Error; err != nil {
+			return err
+		}
 	}
 
 	return db.AutoMigrate(

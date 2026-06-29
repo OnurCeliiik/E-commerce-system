@@ -66,6 +66,10 @@ Default admin: `admin@example.com` / `admin-secret`
 
 Kafka (from host): `localhost:9092`
 
+Prometheus: `http://localhost:9090`
+
+Grafana: `http://localhost:3000` (login `admin` / `admin`) — dashboards for **Gateway** and **Order service**; Prometheus scrapes both.
+
 ## Project layout
 
 Each service is its own Go module (`user-service/`, `product-service/`, etc.). They talk over HTTP or Kafka — no shared Go code between services.
