@@ -126,11 +126,27 @@ func (s *orderService) GetOrder(ctx context.Context, userID, orderID uuid.UUID) 
 }
 
 func (s *orderService) ProcessInventoryReserved(ctx context.Context, event dto.InventoryReservedEvent) error {
-	return s.repo.UpdateStatus(ctx, event.OrderID, string(model.OrderStatusConfirmed))
+	return s.updateOrderStatusIfNotTerminal(ctx, event.OrderID, string(model.OrderStatusConfirmed))
 }
 
 func (s *orderService) ProcessInventoryReservationFailed(ctx context.Context, event dto.InventoryReservationFailedEvent) error {
-	return s.repo.UpdateStatus(ctx, event.OrderID, string(model.OrderStatusFailed))
+	return s.updateOrderStatusIfNotTerminal(ctx, event.OrderID, string(model.OrderStatusFailed))
+}
+
+func (s *orderService) updateOrderStatusIfNotTerminal(ctx context.Context, orderID uuid.UUID, status string) error {
+	order, err := s.repo.FindByID(ctx, orderID)
+	if err != nil {
+		if errors.Is(err, repository.ErrOrderNotFound) {
+			return ErrOrderNotFound
+		}
+		return err
+	}
+
+	if order.Status == string(model.OrderStatusConfirmed) || order.Status == string(model.OrderStatusFailed) {
+		return nil
+	}
+
+	return s.repo.UpdateStatus(ctx, orderID, status)
 }
 
 func toOrderCreatedEvent(order *model.Order) dto.OrderCreatedEvent {
