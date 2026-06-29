@@ -68,7 +68,7 @@ Kafka (from host): `localhost:9092`
 
 Prometheus: `http://localhost:9090`
 
-Grafana: `http://localhost:3000` (login `admin` / `admin`) — dashboards for **Gateway** and **Order service**; Prometheus scrapes both.
+Grafana: `http://localhost:3000` (login `admin` / `admin`) — dashboards for **Gateway**, **Order service**, and **Inventory service**.
 
 ## Project layout
 

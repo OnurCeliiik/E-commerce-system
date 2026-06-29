@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/OnurCeliiik/ecommerce/services/inventory/dto"
+	"github.com/OnurCeliiik/ecommerce/services/inventory/metrics"
 	"github.com/OnurCeliiik/ecommerce/services/inventory/model"
 	"github.com/OnurCeliiik/ecommerce/services/inventory/repository"
 	"github.com/google/uuid"
@@ -78,10 +79,12 @@ func toInventoryResponse(item *model.InventoryItem) *dto.InventoryResponse {
 func (s *inventoryService) ProcessOrderCreated(ctx context.Context, event dto.OrderCreatedEvent) error {
 	claimed, err := s.processedRepo.TryClaim(ctx, event.OrderID)
 	if err != nil {
+		metrics.RecordInventoryEvent("order_created", "error")
 		return err
 	}
 	if !claimed {
 		log.Printf("skip duplicate order.created order_id=%s", event.OrderID)
+		metrics.RecordInventoryEvent("order_created", "duplicate")
 		return nil
 	}
 
@@ -97,6 +100,7 @@ func (s *inventoryService) ProcessOrderCreated(ctx context.Context, event dto.Or
 		if pubErr := s.publisher.PublishInventoryReservationFailed(ctx, failEvent); pubErr != nil {
 			log.Printf("publish inventory.reservation_failed failed for order %s: %v", event.OrderID, pubErr)
 		}
+		metrics.RecordInventoryEvent("order_created", "failed")
 		return err
 	}
 
@@ -113,6 +117,7 @@ func (s *inventoryService) ProcessOrderCreated(ctx context.Context, event dto.Or
 		log.Printf("publish inventory.reserved failed for order %s: %v", event.OrderID, err)
 	}
 
+	metrics.RecordInventoryEvent("order_created", "reserved")
 	return nil
 }
 
