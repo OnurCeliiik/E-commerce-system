@@ -7,6 +7,7 @@ import (
 
 	"github.com/OnurCeliiik/ecommerce/services/notification/dto"
 	"github.com/OnurCeliiik/ecommerce/services/notification/email"
+	"github.com/OnurCeliiik/ecommerce/services/notification/metrics"
 	"github.com/google/uuid"
 )
 
@@ -24,12 +25,18 @@ func NewNotificationService(emailSender EmailSender) *notificationService {
 }
 
 func (s *notificationService) ProcessInventoryReserved(ctx context.Context, event dto.InventoryReservedEvent) error {
+
 	msg := email.Message{
 		To:      recipientEmail(event.CustomerEmail, event.UserID),
 		Subject: fmt.Sprintf("Order confirmed — %s", event.OrderID),
 		Body:    buildOrderConfirmedBody(event),
 	}
-	return s.emailSender.Send(ctx, msg)
+	if err := s.emailSender.Send(ctx, msg); err != nil {
+		metrics.RecordNotificationEvent("inventory_reserved", "error")
+		return err
+	}
+	metrics.RecordNotificationEvent("inventory_reserved", "success")
+	return nil
 }
 
 func (s *notificationService) ProcessInventoryReservationFailed(ctx context.Context, event dto.InventoryReservationFailedEvent) error {
@@ -38,7 +45,12 @@ func (s *notificationService) ProcessInventoryReservationFailed(ctx context.Cont
 		Subject: fmt.Sprintf("Order could not be fulfilled — %s", event.OrderID),
 		Body:    buildOrderFailedBody(event),
 	}
-	return s.emailSender.Send(ctx, msg)
+	if err := s.emailSender.Send(ctx, msg); err != nil {
+		metrics.RecordNotificationEvent("inventory_reservation_failed", "error")
+		return err
+	}
+	metrics.RecordNotificationEvent("inventory_reservation_failed", "success")
+	return nil
 }
 
 func recipientEmail(customerEmail string, userID uuid.UUID) string {
