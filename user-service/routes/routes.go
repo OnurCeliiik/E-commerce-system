@@ -4,17 +4,20 @@ import (
 	"github.com/OnurCeliiik/ecommerce/services/user/handlers"
 	"github.com/OnurCeliiik/ecommerce/services/user/middleware"
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"gorm.io/gorm"
 )
 
 type Dependencies struct {
-	DB                    *gorm.DB
-	UserHandler           *handlers.UserHandler
-	TokenValidator        middleware.TokenValidator
+	DB                     *gorm.DB
+	UserHandler            *handlers.UserHandler
+	TokenValidator         middleware.TokenValidator
 	InternalAuthMiddleware gin.HandlerFunc
 }
 
 func RegisterRoutes(router *gin.Engine, deps Dependencies) {
+	router.Use(middleware.PrometheusMiddleware())
+	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 	router.GET("/health", handlers.HealthCheck(deps.DB))
 
 	v1 := router.Group("/api/v1")
