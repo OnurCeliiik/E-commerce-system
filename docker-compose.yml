@@ -66,10 +66,16 @@ services:
     environment:
       DATABASE_URL: postgres://postgres:postgres@postgres:5432/notification_db?sslmode=disable
       KAFKA_BROKERS: kafka:19092
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+      SMTP_FROM_ADDRESS: noreply@ecommerce.local
+      SMTP_FROM_NAME: E-commerce
     depends_on:
       postgres:
         condition: service_healthy
       kafka:
+        condition: service_started
+      mailpit:
         condition: service_started
 
   order-service:
@@ -155,6 +161,17 @@ services:
       prometheus:
         condition: service_started
 
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: mailpit
+    restart: unless-stopped
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+    volumes:
+      - mailpit-data:/data
+
 volumes:
   user-service-data:
   grafana-data:
+  mailpit-data:

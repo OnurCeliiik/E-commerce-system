@@ -22,7 +22,7 @@ You can register as a customer, log in, browse products, and place orders. An ad
 | **product-service** | Product catalog — CRUD for admins, public reads. |
 | **inventory-service** | Stock per product. Consumes `order.created`, reserves stock, publishes `inventory.reserved` or `inventory.reservation_failed`. |
 | **order-service** | Create orders, list/get your orders. Publishes `order.created`, consumes inventory outcome events, updates status. |
-| **notification-service** | Consumes inventory outcome events and sends order emails (logged to stdout for now). |
+| **notification-service** | Consumes inventory outcome events and sends order emails via Mailpit (dev SMTP). |
 
 ## Order flow (Kafka)
 
@@ -68,7 +68,9 @@ Kafka (from host): `localhost:9092`
 
 Prometheus: `http://localhost:9090`
 
-Grafana: `http://localhost:3000` (login `admin` / `admin`) — dashboards for **Gateway**, **Order service**, and **Inventory service**.
+Grafana: `http://localhost:3000` (login `admin` / `admin`) — dashboards for all services.
+
+Mailpit (order emails): `http://localhost:8025`
 
 ## Project layout
 

@@ -28,7 +28,10 @@ func main() {
 		log.Fatalf("failed to migrate database: %v", err)
 	}
 
-	emailSender := emailsender.NewLogSender()
+	emailSender, err := emailsender.NewFromEnv()
+	if err != nil {
+		log.Fatalf("failed to create email sender: %v", err)
+	}
 
 	processedRepo := repository.NewProcessedNotificationRepository(db)
 	notificationService := service.NewNotificationService(emailSender, processedRepo)
