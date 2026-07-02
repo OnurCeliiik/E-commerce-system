@@ -66,7 +66,7 @@ Default admin: `admin@example.com` / `admin-secret`
 
 Kafka (from host): `localhost:9092`
 
-Prometheus: `http://localhost:9090`
+Prometheus: `http://localhost:9090` — alert rules at `/alerts`
 
 Grafana: `http://localhost:3000` (login `admin` / `admin`) — dashboards for all services.
 

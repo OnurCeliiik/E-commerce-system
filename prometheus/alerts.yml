@@ -1,0 +1,51 @@
+groups:
+  - name: service_availability
+    rules:
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service {{ $labels.job }} is down"
+          description: "Prometheus cannot scrape {{ $labels.job }} (instance {{ $labels.instance }})."
+
+  - name: kafka_processing
+    rules:
+      - alert: InventoryKafkaErrors
+        expr: sum(rate(inventory_events_total{result="error"}[5m])) > 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Inventory-service Kafka processing errors"
+          description: "inventory_events_total with result=error is increasing."
+
+      - alert: OrderKafkaErrors
+        expr: sum(rate(order_inventory_events_total{result="error"}[5m])) > 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Order-service Kafka processing errors"
+          description: "order_inventory_events_total with result=error is increasing."
+
+      - alert: NotificationKafkaErrors
+        expr: sum(rate(notification_events_total{result="error"}[5m])) > 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Notification-service Kafka processing errors"
+          description: "notification_events_total with result=error is increasing."
+
+  - name: http_errors
+    rules:
+      - alert: HighHTTP5xxRate
+        expr: sum(rate(http_requests_total{status=~"5..",path!="/metrics"}[5m])) by (job) > 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "HTTP 5xx responses on {{ $labels.job }}"
+          description: "{{ $labels.job }} is returning server errors."
