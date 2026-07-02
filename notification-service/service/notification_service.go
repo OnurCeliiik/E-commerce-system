@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/OnurCeliiik/ecommerce/services/notification/dto"
@@ -16,15 +17,37 @@ type EmailSender interface {
 	Send(ctx context.Context, msg email.Message) error
 }
 
-type notificationService struct {
-	emailSender EmailSender
+type ProcessedNotificationRepository interface {
+	TryClaim(ctx context.Context, orderID uuid.UUID, eventType string) (bool, error)
 }
 
-func NewNotificationService(emailSender EmailSender) *notificationService {
-	return &notificationService{emailSender: emailSender}
+type notificationService struct {
+	emailSender   EmailSender
+	processedRepo ProcessedNotificationRepository
+}
+
+func NewNotificationService(
+	emailSender EmailSender,
+	processedRepo ProcessedNotificationRepository,
+) *notificationService {
+	return &notificationService{
+		emailSender:   emailSender,
+		processedRepo: processedRepo,
+	}
 }
 
 func (s *notificationService) ProcessInventoryReserved(ctx context.Context, event dto.InventoryReservedEvent) error {
+	const eventType = "inventory_reserved"
+	claimed, err := s.processedRepo.TryClaim(ctx, event.OrderID, eventType)
+	if err != nil {
+		metrics.RecordNotificationEvent(eventType, "error")
+		return err
+	}
+	if !claimed {
+		log.Printf("skip duplicate %s order_id=%s", eventType, event.OrderID)
+		metrics.RecordNotificationEvent(eventType, "duplicate")
+		return nil
+	}
 
 	msg := email.Message{
 		To:      recipientEmail(event.CustomerEmail, event.UserID),
@@ -40,6 +63,18 @@ func (s *notificationService) ProcessInventoryReserved(ctx context.Context, even
 }
 
 func (s *notificationService) ProcessInventoryReservationFailed(ctx context.Context, event dto.InventoryReservationFailedEvent) error {
+	const eventType = "inventory_reservation_failed"
+	claimed, err := s.processedRepo.TryClaim(ctx, event.OrderID, eventType)
+	if err != nil {
+		metrics.RecordNotificationEvent(eventType, "error")
+		return err
+	}
+	if !claimed {
+		log.Printf("skip duplicate %s order_id=%s", eventType, event.OrderID)
+		metrics.RecordNotificationEvent(eventType, "duplicate")
+		return nil
+	}
+
 	msg := email.Message{
 		To:      recipientEmail(event.CustomerEmail, event.UserID),
 		Subject: fmt.Sprintf("Order could not be fulfilled — %s", event.OrderID),

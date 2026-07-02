@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/OnurCeliiik/ecommerce/services/notification/model"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -32,5 +33,7 @@ func ConnectDB() (*gorm.DB, error) {
 }
 
 func MigrateDB(db *gorm.DB) error {
-	return db.AutoMigrate()
+	return db.AutoMigrate(
+		&model.ProcessedNotification{},
+	)
 }

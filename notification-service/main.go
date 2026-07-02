@@ -9,6 +9,7 @@ import (
 	"github.com/OnurCeliiik/ecommerce/services/notification/database"
 	emailsender "github.com/OnurCeliiik/ecommerce/services/notification/email"
 	kafkasub "github.com/OnurCeliiik/ecommerce/services/notification/kafka"
+	"github.com/OnurCeliiik/ecommerce/services/notification/repository"
 	"github.com/OnurCeliiik/ecommerce/services/notification/routes"
 	"github.com/OnurCeliiik/ecommerce/services/notification/service"
 	"github.com/gin-gonic/gin"
@@ -28,7 +29,9 @@ func main() {
 	}
 
 	emailSender := emailsender.NewLogSender()
-	notificationService := service.NewNotificationService(emailSender)
+
+	processedRepo := repository.NewProcessedNotificationRepository(db)
+	notificationService := service.NewNotificationService(emailSender, processedRepo)
 
 	if brokers := strings.TrimSpace(os.Getenv("KAFKA_BROKERS")); brokers != "" {
 		reservedConsumer, err := kafkasub.NewInventoryReservedConsumer(brokers, notificationService)
