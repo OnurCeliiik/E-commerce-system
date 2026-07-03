@@ -99,6 +99,26 @@ services:
       kafka:
         condition: service_started
 
+  audit-service:
+    build:
+      context: ./audit-service
+      dockerfile: Dockerfile
+    environment:
+      MONGODB_URI: mongodb://mongo:27017
+      MONGODB_DATABASE: audit_db
+    depends_on:
+      mongo:
+        condition: service_started
+
+  mongo:
+    image: mongo:7
+    container_name: mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
@@ -176,3 +196,4 @@ volumes:
   user-service-data:
   grafana-data:
   mailpit-data:
+  mongo-data:
